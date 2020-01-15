@@ -156,12 +156,13 @@ max(check_max_session) # 최대 55개
 11. 세션 시작 및 종료 공휴일 여부 (처음 사이트 시작시간이나 마지막 사이트 시작시간이 공휴일에 포함되는지 여부)
 12. 세션 시작일 (날짜)
 13. 세션 구매여부 (날짜)
+14. 세션 사이트 개수 비율 (unique 사이트 / total 사이트)
 '''
 
 
 ###################################
 ## 25개의 컬럼명이 첨부한 파일을 불러오기
-x_columns = pd.read_csv("D:/Cheil/preprocessed_x_columns.csv")
+x_columns = pd.read_csv("D:/Cheil/preprocessed_x_columns2.csv")
 x_columns = x_columns.drop(columns=['Unnamed: 0'], axis=1).rename(columns={'0' : 'x_columns'})    
 
 
@@ -170,7 +171,7 @@ check_max_session = 55
 
 
 ## X값(독립변수)들을 저장할 변수 생성
-full_X = pd.DataFrame(np.zeros((1, 25)), columns=list(x_columns.iloc[:,0]))
+full_X = pd.DataFrame(np.zeros((1, 27)), columns=list(x_columns.iloc[:,0]))
 
 
 ## Y값(종속변수 == 다음날 구매 여부 예측)을 저장할 변수 생성
@@ -373,15 +374,20 @@ for uid_index, uid in enumerate(survey3.iloc[:,0]) :
                 t_buy.iloc[i, 1] = 0 # 구매하지 않음
         return t_buy
     t_buy = check_buy(t_buy, t_day)
+
+
+    #14. 세션 사이트 개수 비율 (unique 사이트 / total 사이트)
+    site_ratio = u_freq['unique_site'] / t_site['total_site']
+    site_ratio = pd.DataFrame(site_ratio).rename(columns={0 : 'site_ratio'})
     
-    
+     
     ## 독립변수들을 하나의 데이터프레임으로 합치기
-    t_total = pd.concat([u_freq, t_site, t1, t2, t_o1_df, u_o2_df, t_o2_df, t_o2_c_df, t_pm, t_le, t_time, t_holiday, t_buy], axis=1)
+    t_total = pd.concat([u_freq, t_site, t1, t2, t_o1_df, u_o2_df, t_o2_df, t_o2_c_df, t_pm, t_le, t_time, t_holiday, t_buy, site_ratio], axis=1)
     t_le_f2 = pd.DataFrame(t_le_f.dt.hour)
     t_le_f2 = t_le_f2.rename(columns={'Time' : 't_le_f2'})
     t_le_f3 = pd.DataFrame(t_le_f.dt.minute)
     t_le_f3 = t_le_f3.rename(columns={'Time' : 't_le_f3'})
-    t_c = pd.concat([u_freq, t_site, t1, t2, t_o1_df, u_o2_df, t_o2_df, t_o2_c_df, t_pm, t_le, t_time, t_holiday, t_buy, t_le_f2, t_le_f3], axis=1)
+    t_c = pd.concat([u_freq, t_site, t1, t2, t_o1_df, u_o2_df, t_o2_df, t_o2_c_df, t_pm, t_le, t_time, t_holiday, t_buy, site_ratio, t_le_f2, t_le_f3], axis=1)
     
     t_c = t_c.sort_values(by=['t_day', 't_le_f2', 't_le_f3'], ascending=True)
     t_c = t_c.reset_index().drop(columns=['index'])
@@ -397,10 +403,10 @@ for uid_index, uid in enumerate(survey3.iloc[:,0]) :
         except :
             check_session = 0
         for j in range(max_session - check_session) :
-            t_c = pd.concat([t_c, pd.DataFrame(np.full((1,26), np.nan), columns=t_c.columns)])
+            t_c = pd.concat([t_c, pd.DataFrame(np.full((1,27), np.nan), columns=t_c.columns)])
             t_c.iloc[len(t_c)-1, 22] = i  # day
-            t_c.iloc[len(t_c)-1, 24] = 24 # hour
-            t_c.iloc[len(t_c)-1, 25] = 60 # minute
+            t_c.iloc[len(t_c)-1, 25] = 24 # hour
+            t_c.iloc[len(t_c)-1, 26] = 60 # minute
             
             if i in t_day :
                 t_c.iloc[len(t_c)-1, 23] = 1
@@ -410,8 +416,8 @@ for uid_index, uid in enumerate(survey3.iloc[:,0]) :
     X = t_c.sort_values(by=['t_day', 't_le_f2', 't_le_f3'], ascending=True)
     for i in range(len(X)) :
         if X.iloc[i, 0] == np.nan :
-            X.iloc[i, 24] = np.nan # hour
-            X.iloc[i, 25] = np.nan # minute
+            X.iloc[i, 25] = np.nan # hour
+            X.iloc[i, 26] = np.nan # minute
     
    
     ## full_X와 full_Y에 해당 설문 대상자의 데이터를 저장
