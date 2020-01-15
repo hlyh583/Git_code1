@@ -1,4 +1,4 @@
-,0
+,x_columns
 0,unique_site
 1,total_site
 2,keyword1
@@ -22,5 +22,7 @@
 20,time_diff
 21,holiday_diff
 22,t_day
-23,t_le_f2
-24,t_le_f3
+23,t_buy
+24,site_ratio
+25,t_le_f2
+26,t_le_f3
