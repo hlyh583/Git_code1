@@ -14,6 +14,9 @@ from sklearn import  metrics
 ## 해당 모델은 아래 사이트를 참조하여 만듦
 # https://keraskorea.github.io/posts/2018-10-24-little_data_powerful_model/
 
+## Hand Veins Similarity Check with CNN
+# 손등 간의 정맥을 비교하여 유사도(=정확도)를 산출 후, 학습시킨 사람의 손등인지 아닌지를 판별하는 코드.
+
 
 ## 베이스 폴더 지정
 base_dir = 'C:/Users/JKKIM/Desktop/김태훈/Pilot'
