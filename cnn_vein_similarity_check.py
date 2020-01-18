@@ -20,7 +20,7 @@ from sklearn import  metrics
 
 
 ## 베이스 폴더 지정
-base_dir = 'C:/Users/JKKIM/Desktop/김태훈/Pilot'
+base_dir = 'C:/Users/JKKIM/Desktop/KTH/Pilot'
 os.chdir(base_dir)
 
 
