@@ -15,7 +15,8 @@ from sklearn import  metrics
 # https://keraskorea.github.io/posts/2018-10-24-little_data_powerful_model/
 
 ## Hand Veins Similarity Check with CNN
-# 손등 간의 정맥을 비교하여 유사도(=정확도)를 산출 후, 학습시킨 사람의 손등인지 아닌지를 판별하는 코드.
+# 지문 인식처럼 주인의 손등의 정맥을 학습 후, 해당 손등의 정맥이 주인의 것인지 아닌지를 CNN으로 판별하는 코드
+# Recall 값은 1.0, Accuracy는 0.95까지 나옴
 
 
 ## 베이스 폴더 지정
@@ -418,14 +419,6 @@ plt.plot(epochs, val_loss, 'r', label='Validation loss')
 plt.title('Training and Validation Loss')
 plt.legend()
 plt.show()
-
-
-## 끝ㅋ
-
-
-
-
-
 
 
 
