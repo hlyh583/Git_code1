@@ -162,7 +162,7 @@ max(check_max_session) # 최대 55개
 
 
 ###################################
-## 25개의 컬럼명이 첨부한 파일을 불러오기
+## 27개의 컬럼명이 첨부한 파일을 불러오기
 x_columns = pd.read_csv("D:/Cheil/preprocessed_x_columns2.csv")
 x_columns = x_columns.drop(columns=['Unnamed: 0'], axis=1).rename(columns={'0' : 'x_columns'})    
 
@@ -172,7 +172,7 @@ check_max_session = 55
 
 
 ## X값(독립변수)들을 저장할 변수 생성
-full_X = pd.DataFrame(np.zeros((1, 27)), columns=list(x_columns.iloc[:,0]))
+full_X = pd.DataFrame(np.zeros((0, 27)), columns=list(x_columns.iloc[:,0]))
 
 
 ## Y값(종속변수 == 다음날 구매 여부 예측)을 저장할 변수 생성
@@ -180,22 +180,26 @@ full_Y = []
 
 
 ## 전체 450명 중에서 100명만 분석
-survey3 = survey3.iloc[:100, :]
+#survey3 = survey3.iloc[:100, :]
 
 
 ## 고객 및 일별 누적 세션 개수 계산을 저장할 컬럼과 list 생성 (최근 30개 세션 시작 시점을 알아보기 위함)
 lastday_col = [str(x) + "일" for x in range(1, 31)]
-lastday_list = pd.DataFrame(np.zeros((1, 30)), columns=lastday_col)
+lastday_list = pd.DataFrame(np.zeros((0, 30)), columns=lastday_col)
 
 
+check_zero_session = []
 ## 설문 대상자 한 명의 클릭스트림 데이터를 기반으로 세션별 변수 값들을 추출 후, full_X 변수에 concat하고, full_Y에 append함
 # 총 100회(=100명) 반복
 for uid_index, uid in enumerate(survey3.iloc[:,0]) :
     print("# %d번째" % uid_index)
-    #uid = survey3.iloc[99,0]
-    #uid_index = 99
+    #uid = survey3.iloc[221,0]
+    #uid_index = 221
     uid_02 = total_info[total_info['UID'] == uid]
-
+    if len(uid_02) == 0 :
+        check_zero_session.append((uid_index, uid))
+        continue
+    
 
     #1. 세션별 unique 사이트 개수 (Domain 기준)
     e_freq = uid_02.groupby(['session_id'])['Domain'].value_counts()
@@ -414,7 +418,7 @@ for uid_index, uid in enumerate(survey3.iloc[:,0]) :
 
 
 ## X값(독립변수)들을 저장할 변수 생성
-full_X = pd.DataFrame(np.zeros((1, 27)), columns=list(x_columns.iloc[:,0]))
+full_X = pd.DataFrame(np.zeros((0, 27)), columns=list(x_columns.iloc[:,0]))
 
 
 ## Y값(종속변수 == 다음날 구매 여부 예측)을 저장할 변수 생성
@@ -423,20 +427,19 @@ full_Y = []
 
 ## 분석 결과, 8일에 인터넷을 사용한 사람이 9일에는 사용하지 않거나, 그 반대의 경우가 꽤 있었음
 # 따라서 8일이나 9일에 인터넷을 사용한 사람들 중에서 누적 세션이 30개 이상인 사람만 선별
-lastday_list = lastday_list.iloc[1:,:]
 lastday_list2 = lastday_list.reset_index().drop(columns=['index'])
 b = pd.DataFrame(lastday_list2['8일'])
-b = b[b['8일'] > 30]
+b = b[b['8일'] >= 30]
 b_a = b.index
 
 c = pd.DataFrame(lastday_list2['9일'])
-c = c[c['9일'] > 30]
+c = c[c['9일'] >= 30]
 c_a = c.index
 
 new_list_30 = set(b_a | c_a)
 new_list_30 = list(new_list_30)
 if len(new_list_30) % 2 != 0 :
-    new_list_30 = new_list_30[:-1] # 71명이라서, 짝수로 맞추기 위해 맨 마지막 사람 제거
+    new_list_30 = new_list_30[:-1] # 331명이라서, 짝수로 맞추기 위해 맨 마지막 사람 제거
 
 
 ## 전체 450명 중에서 new_list_30에 포함된 사람들의 UID를 list에 저장
@@ -444,13 +447,15 @@ new_index_list = []
 for i in new_list_30 :
     new_index_list.append(survey3.iloc[i, :][0])
 
+max_session = 30
+window_size = 9
 
 ## 설문 대상자 한 명의 클릭스트림 데이터를 기반으로 세션별 변수 값들을 추출 후, full_X 변수에 concat하고, full_Y에 append함
 # new_list_list 길이만큼 반복
 for uid_index, uid in enumerate(new_index_list) :
     print("# %d번째" % uid_index)
-    #uid = survey3.iloc[99,0]
-    #uid_index = 99
+    #uid = new_index_list[0]
+    #uid_index = 0
     uid_02 = total_info[total_info['UID'] == uid]
 
 
@@ -675,8 +680,6 @@ for uid_index, uid in enumerate(new_index_list) :
     
     
     ## full_X와 full_Y에 해당 설문 대상자의 데이터를 저장
-    max_session = 30
-    window_size = 9
     X = t_c.sort_values(by=['t_day', 't_le_f2', 't_le_f3'], ascending=True)
     X = X.reset_index().drop(columns=['index'])
     for i in range(9, 30) : # 21개 (9~29일)
@@ -686,13 +689,18 @@ for uid_index, uid in enumerate(new_index_list) :
         full_X = pd.concat([full_X, X_session])
         full_Y.append(X[X.t_day == i + 1].head(1).t_buy.values[0])
 
+full_X.head(30)
+#full_X.to_csv("D:/Cheil/recent_full_X.csv") #330명 대상
+#pd.DataFrame(full_Y, columns=['full_Y']).to_csv("D:/Cheil/recent_full_Y.csv")
+#pd.DataFrame(new_list_30, columns=['new_list_30']).to_csv("D:/Cheil/new_list_30.csv")
+#full_X = pd.read_csv(("D:/Cheil/recent_full_X.csv")).drop(columns=['Unnamed: 0'])
+#full_Y = pd.read_csv(("D:/Cheil/recent_full_Y.csv")).drop(columns=['Unnamed: 0'])
+#new_list_30 = pd.read_csv(("D:/Cheil/new_list_30.csv")).drop(columns=['Unnamed: 0'])
 
-
-## 기준이 되었던 행(0번 행)을 제거하고, full_Y를 list에서 데이터 프레임으로 변환
+## full_Y를 list에서 데이터 프레임으로 변환
 full_X2 = full_X.copy()
-full_X2 = full_X2.iloc[1:,:]
 full_Y = pd.DataFrame(full_Y, columns=['full_Y'])
-
+#full_X2 = full_X2.drop(columns=['t_buy'])
 
 
 ## Data Scaling
@@ -709,26 +717,16 @@ full_X2 = np.nan_to_num(full_X2, nan=-9999)
 
 ## Train size : 80%, Test size : 20%
 # 추후에 Train, Validation, Test로 나눠서 분석해야됨
-train_ratio = 0.80
+train_ratio = 0.75
 train_size = int(len(full_X2) * train_ratio)
-if train_size % 21 != 0 :
-    t_size = train_size % 21
-    train_size -= t_size
 train_Y_size = int(len(full_Y) * train_ratio)
+    
 
 train_X = np.array(full_X2[:train_size, :])
-#train_X = np.array(full_X2.iloc[:train_size, :])
 train_Y = np.array(full_Y.iloc[:train_Y_size, :])
 
 test_X = np.array(full_X2[train_size:, :])
-#test_X = np.array(full_X2.iloc[train_size:, :])
 test_Y = np.array(full_Y.iloc[train_Y_size:, :])
-'''
-train_X = full_X2.iloc[:train_size, :]
-train_Y = full_Y.iloc[:train_size, :]
-test_X = full_X2.iloc[train_size:, :]
-test_Y = full_Y.iloc[train_size:, :]
-'''
 
 
 ## RNN의 입력값 형태를 계산
@@ -748,16 +746,21 @@ print(train_X.shape, train_Y.shape, test_X.shape, test_Y.shape)
 ## Design network
 model = Sequential()
 model.add(Masking(mask_value=-9999, input_shape=(a_timesteps, a_features)))
-model.add(LSTM(64, input_shape=(a_timesteps, a_features), dropout=0.2, recurrent_dropout=0.2, return_sequences=True))
-model.add(LSTM(128, dropout=0.2, recurrent_dropout=0.2, return_sequences=True))
-model.add(LSTM(32, dropout=0.2, recurrent_dropout=0.2))
+#model.add(LSTM(64, input_shape=(a_timesteps, a_features), dropout=0.2, recurrent_dropout=0.2, return_sequences=True))
+model.add(LSTM(2048, input_shape=(a_timesteps, a_features)))
+#model.add(LSTM(64, dropout=0.4, recurrent_dropout=0.4, return_sequences=True))
+#model.add(LSTM(64, dropout=0.5, recurrent_dropout=0.5, return_sequences=True))
+#model.add(LSTM(64))
+#model.add(Dense(48, activation= 'relu'))
+#model.add(Dropout(0.5))
+#model.add(Dense(32, activation= 'relu'))
 #model.add(LSTM(50, input_shape=(a_timesteps, a_features)))
 model.add(Dense(1, activation='sigmoid'))
-model.compile(loss='binary_crossentropy', optimizer=Adamax(lr=0.0001), metrics=['accuracy'],)
+model.compile(loss='binary_crossentropy', optimizer=Adamax(lr=0.0005), metrics=['accuracy'],)
 
 
 ## Fit network
-history = model.fit(train_X, train_Y, epochs=70, batch_size=a_batch_size, validation_data=(test_X, test_Y), shuffle=False)
+history = model.fit(train_X, train_Y, epochs=40, batch_size=a_batch_size, validation_data=(test_X, test_Y), shuffle=False)
 
 
 ## Plot 예시
