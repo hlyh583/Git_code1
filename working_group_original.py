@@ -210,10 +210,22 @@ max(check_max_session) # 최대 55개
 25. site_ratio : 세션 사이트 개수 비율 (unique 사이트 / total 사이트)
 26. t_hour : 세션 시작 시간 (hour)
 27. t_minute : 세션 시작 시간 (minute)
-28. shop_display_time : 세션별 쇼핑 사이트 평균 체류 시간 / 세션 내 페이지(url) 별 평균 체류 시간
+28. shop_display_time : 세션별 평균 체류 시간
 
 -- 종속변수 리스트--
 full_Y : 해당 윈도우(9일치)의 다음날(10일째)에 상품을 구매했는지 여부
+
+
+1. unique_site : 세션별 unique 사이트 개수 (Domain 기준)
+2. total_site : 세션별 total 사이트 개수
+3. keyword1 : 세션별 total 검색 횟수 (keyword_p)
+4. keyword2 : 세션별 total 검색 횟수 (keyword_t)
+18. mobile : 세션 및 pc total 사이트 개수
+19. pc : 세션 및 mobile total 사이트 개수
+20. time_length : 세션의 길이 (초 단위, 마지막 사이트 접속 시간 - 처음 사이트 시작 시간)
+22. holiday_diff : 세션 시작 및 종료 공휴일 여부 (처음 사이트 시작시간이나 마지막 사이트 시작시간이 공휴일에 포함되는지 여부)
+         즉, 세션 시작 시간이 평일이고 종료 시간이 공휴일인 경우도 공휴일로 취급하고, 반대로 세션 시작 시간이 공휴일이고 종료 시간이 평일이어도 공휴일로 취급
+26. t_hour : 세션 시작 시간 (hour)
 '''
 
 
@@ -222,6 +234,7 @@ full_Y : 해당 윈도우(9일치)의 다음날(10일째)에 상품을 구매했
 x_columns = pd.read_csv("D:/Cheil/preprocessed_x_columns3.csv")
 x_columns = x_columns.drop(columns=['Unnamed: 0'], axis=1).rename(columns={'0' : 'x_columns'})
 x_columns = pd.DataFrame(pd.concat([x_columns.iloc[:25, 0], x_columns.iloc[26:, 0]]))
+
 
 ## 하루 최대 세션 길이 설정 (Padding)
 check_max_session = 55
@@ -233,9 +246,12 @@ full_X = pd.DataFrame(np.zeros((0, 27)), columns=list(x_columns.iloc[:,0]))
 
 ## Y값(종속변수 == 다음날 구매 여부 예측)을 저장할 변수 생성
 full_Y = []
-
 #survey3 = survey3.iloc[:100, :]
+
+
+## 세션이 하나도 없는 유저들이 있는 경우, 해당 list에 추가시킴
 check_zero_session = []
+
 
 ## 설문 대상자 한 명의 클릭스트림 데이터를 기반으로 세션별 변수 값들을 추출 후, full_X 변수에 concat하고, full_Y에 append함
 # 설문 대상자 수 만큼 반복
@@ -243,11 +259,18 @@ for uid_index, uid in enumerate(survey3.iloc[:,0]) :
     print("# %d번째" % uid_index)
     #uid = survey3.iloc[99,0]
     #uid_index = 99
+    
+    
+    ## 해당 유저의 클릭스트림을 전체 데이터셋으로부터 추출
     uid_02 = total_info[total_info['UID'] == uid]
+    
+    
+    ## 세션이 하나도 없는 유저들이 있는 경우, check_zero_session이라는 list에 추가시키고 아래의 코드는 전부 Skip함
     if len(uid_02) == 0 :
         check_zero_session.append((uid_index, uid))
         print("%d번째에 Zero session 존재함" % uid_index)
         continue
+
 
     #1. 세션별 unique 사이트 개수 (Domain 기준)
     e_freq = uid_02.groupby(['session_id'])['Domain'].value_counts()
@@ -462,6 +485,7 @@ for uid_index, uid in enumerate(survey3.iloc[:,0]) :
     t_shopping_list = pd.DataFrame(t_shopping_list['shop_display_time'] / t_total_mean['display_time']).rename(columns={0 : 'shop_display_time'})
     '''
     
+    
     ## 독립변수들을 하나의 데이터프레임으로 합치기
     t_total = pd.concat([u_freq, t_site, t1, t2, t_o1_df, u_o2_df, t_o2_df, t_o2_c_df, t_pm, t_le, t_time, t_holiday, t_buy, site_ratio], axis=1)
     t_le_f2 = pd.DataFrame(t_le_f.dt.hour)
@@ -473,7 +497,6 @@ for uid_index, uid in enumerate(survey3.iloc[:,0]) :
     t_c = t_c.sort_values(by=['t_day', 't_hour', 't_minute'], ascending=True)
     t_c = t_c.reset_index().drop(columns=['index'])
     
-  
     
     ## Padding 처리
     max_session = 55
@@ -526,15 +549,17 @@ full_Y = pd.read_csv("C:/Users/sim-server/Desktop/RecommenderSystems/클릭스�
 ## 기준이 되었던 행(0번 행)을 제거하고, full_Y를 list에서 데이터 프레임으로 변환
 full_X2 = full_X.copy()
 full_Y2 = full_Y.copy()
-
 #full_X2 = full_X2.iloc[:1039500, :]
 #full_Y2 = full_Y2.iloc[:2100, :]
-
 #full_X2 = full_X2.iloc[:4656960, :]
 #full_Y2 = full_Y.iloc[:9408, :]
+
+
+## Day변수(t_day), 구매여부 변수(t_buy)를 X(독립변수)에서 제거
 full_X2 = full_X2.drop(columns=['t_day', 't_buy'])
 
-## Data Scaling
+
+## Data Scaling : 0과 1사이의 값으로 만듦
 #scaler = StandardScaler() 
 scaler = MinMaxScaler(feature_range=(0, 1))
 full_X2 = scaler.fit_transform(full_X2)
@@ -545,7 +570,6 @@ full_X2 = np.nan_to_num(full_X2, nan=-9999)
 
 
 ## Train size : 68%, Validation size : 20%, Test size : 12%
-# 추후에 Train, Validation, Test로 나눠서 분석해야됨
 train_ratio = 0.68
 train_size = int(len(full_X2) * train_ratio)
 validation_size = int(len(full_X2) * (train_ratio + 0.20))
@@ -565,11 +589,13 @@ validation_Y = np.array(full_Y2.iloc[train_Y_size:validation_Y_size, :])
 test_X = np.array(full_X2[validation_size:, :])
 test_Y = np.array(full_Y2.iloc[validation_Y_size:, :])
 
+
 ## Class 불균형 해결을 위해 Class별 가중치 적용
 class_weights = class_weight.compute_class_weight('balanced',
                                                  np.unique(train_Y),
                                                  [train_Y[x][0] for x in range(len(train_Y))])
 class_weights = dict(enumerate(class_weights))
+
 
 ## RNN의 입력값 형태를 계산
 a_samples1 = int((calendar.monthrange(2014, 6)[1] - window_size) * ((len(survey3) - 1) * train_ratio))
@@ -589,6 +615,7 @@ test_X = test_X.reshape((a_samples3, a_timesteps, a_features))
 print(train_X.shape, train_Y.shape, test_X.shape, test_Y.shape)
 
 
+## 매 Epoch마다 recall값을 확인하기 위함
 def recall_m(y_true, y_pred):
     true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
     possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
